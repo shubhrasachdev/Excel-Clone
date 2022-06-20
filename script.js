@@ -277,4 +277,5 @@ $("#fill-color-icon, #text-color-icon").click(function() {
     setTimeout(() => {
         $(this).parent().click();
     }, 10);
-})
+});
+
