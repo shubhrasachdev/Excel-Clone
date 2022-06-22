@@ -279,3 +279,38 @@ $("#fill-color-icon, #text-color-icon").click(function() {
     }, 10);
 });
 
+function selectSheet(ele) {
+    $(".sheet-tab.selected").removeClass("selected");
+    $(ele).addClass("selected");
+}
+
+$(".sheet-tab").click((e) => selectSheet(e.target));
+
+function renameSheet(ele) {
+    
+}
+
+$(".sheet-tab").bind("contextmenu", function(e) {
+    e.preventDefault();
+    selectSheet(this);
+    $(".sheet-options-modal").remove();
+    let modal = $(`<div class="sheet-options-modal">
+                        <div class="option sheet-rename">Rename</div>
+                        <div class="option sheet-delete">Delete</div>
+                    </div>`);
+    $(".container").append(modal);
+    $(".sheet-options-modal").css({ "bottom": 0.04 * $(window).height(), "left": e.pageX });
+    // can be only added when modal appears, outside will load on launch itself.
+
+    // TODO: Cursor placement and text clearing on renaming a sheet
+    $(".sheet-rename").click(function(e) {
+        
+    });
+});
+
+$(".container").click(function() {
+    $(".sheet-options-modal").remove();
+});
+
+
+
