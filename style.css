@@ -263,7 +263,6 @@ body{
 }
 
 .sheet-scroller {
-    margin-right: 20px;
     display: flex;
     align-items: center;
 }
@@ -272,12 +271,19 @@ body{
     margin-right: 10px;
     display: flex;
     border-left: 0.5px solid lightgray;
+    overflow: scroll;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
 
+.sheet-tab-container::-webkit-scrollbar {
+    display: none;
 }
 
 .sheet-tab {
     display: flex;
     justify-content: center;
+    min-width: 90px;
     padding: 3px 10px 0px 10px;
     border-right: 1px solid lightgray;
     font-weight: 600;
@@ -302,6 +308,8 @@ body{
 .add-sheet {
     color: #217346;
     font-size: 20px;
+    margin-right: 10px;
+    margin-left: 5px;
 }
 
 .scroller {
@@ -437,4 +445,11 @@ body{
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+.error {
+    color: rgb(195, 0, 0);
+    margin-top: 5px;
+    font-size: 10px;
+    font-style: italic;
 }
