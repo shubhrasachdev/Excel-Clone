@@ -32,6 +32,8 @@ $("#cells").scroll(function(){
 let cellData = { "Sheet 1": [] };
 let totalSheets = 1;
 let selectedSheet = "Sheet 1";
+
+// For selection by mouse movement
 let mousemoved = false, startCellStored = false;
 let startCell, endCell;
 
@@ -80,8 +82,8 @@ function addEventsToCells() {
     });
 }
 
-function loadNewSheet() {
-    $("#cells").text("");
+function createSheet() {
+    $("#cells").empty();
     for(let i = 1; i <= 100; i++){
         let row = $('<div class="cell-row"></div>');
         let rowArray = [];
@@ -103,9 +105,10 @@ function loadNewSheet() {
         $('#cells').append(row);
     }
     addEventsToCells();
+    addEventsToSheetTabs();
 }
 
-loadNewSheet();
+createSheet();
 
 function findRowCol(ele) {
     let idArray = $(ele).attr("id").split("-");
@@ -297,14 +300,18 @@ $("#fill-color-icon, #text-color-icon").click(function() {
 });
 
 function selectSheet(ele) {
+    addLoader();
     $(".sheet-tab.selected").removeClass("selected");
     $(ele).addClass("selected");
     selectedSheet = $(ele).text();
-    loadSheet();
+    setTimeout(() => {
+        loadSheet();
+        removeLoader();
+    });
 }
 
 function loadSheet() {
-    $("#cells").text("");
+    $("#cells").empty();
     let data = cellData[selectedSheet];
     for(let i = 1; i <= data.length; i++) {
         let row = $('<div class="cell-row"></div>');
@@ -340,11 +347,10 @@ $(".container").click(function() {
 });
 
 function addEventsToSheetTabs() {
-    $(".sheet-tab").off("bind", "click");
     // To give custom context menu
-    $(".sheet-tab").bind("contextmenu", function(e) {
+    $(".sheet-tab.selected").bind("contextmenu", function(e) {
         e.preventDefault();
-        selectSheet(this);
+        
         $(".sheet-options-modal").remove();
         let modal = $(`<div class="sheet-options-modal">
                             <div class="option sheet-rename">Rename</div>
@@ -358,10 +364,11 @@ function addEventsToSheetTabs() {
         $(".sheet-rename").click(function(e) {
             
         });
+        if(!$(this).hasClass("selected")) selectSheet(this);
     });
 
     // select a different sheet
-    $(".sheet-tab").click(function(e)  {
+    $(".sheet-tab.selected").click(function(e)  {
         if(!$(this).hasClass("selected")) selectSheet(this);
     });
 }
@@ -370,14 +377,28 @@ addEventsToSheetTabs();
 
 // Add new sheet
 $(".add-sheet").click(function(e) {
+    addLoader();
     totalSheets++;
     selectedSheet = `Sheet ${totalSheets}`;
     cellData[selectedSheet] = [];
-    loadNewSheet();
     $(".sheet-tab.selected").removeClass("selected");
     $(".sheet-tab-container").append(`<div class="sheet-tab selected">Sheet ${totalSheets}</div>`);
-    addEventsToSheetTabs();
+    setTimeout(() => {
+        createSheet();
+        removeLoader();
+    }, 10);
 });
+
+function addLoader() {
+  $(".container").append(`
+            <div class="loader-parent">
+                    <span class="loader"/>
+                </div>`);
+}
+
+function removeLoader() {
+    $(".loader-parent").remove();
+}
 
 
 
