@@ -1,5 +1,8 @@
 * {
     box-sizing: border-box;
+
+    /* To remove blinking cursor on clickable elements */
+    user-select: none; 
 }
 
 body{
