@@ -158,17 +158,22 @@ function selectCell(ele, e, mouseSelection) {
 
 // TODO Fix previous attributes of cells being ignored when a new one is selected
 function changeHeader([row, col]) {
-    // let data = cellData[selectedSheet][row - 1][col - 1];
-    // $("#font-family").val(data["font-family"]);
-    // $("#font-family").css("font-family", data["font-family"]);
-    // $("#font-size").val(data["font-size"]);
-    // $(".alignment.selected").removeClass("selected");
-    // $(`.alignment[data-type=${data.alignment}]`).addClass("selected");
-    // addRemoveSelectFromFontStyle(data, "bold");
-    // addRemoveSelectFromFontStyle(data, "italic");
-    // addRemoveSelectFromFontStyle(data, "underlined");
-    // $("#fill-color-icon").css("border-bottom", `3px solid ${data.bgcolor}`);
-    // $("#text-color-icon").css("border-bottom", `3px solid ${data.color}`);
+    let data;
+    if(cellData[selectedSheet][row - 1] && cellData[selectedSheet][row - 1][col - 1]) {
+        data = cellData[selectedSheet][row - 1][col - 1];
+    } else {
+        data = defaultProperties;
+    }
+    $("#font-family").val(data["font-family"]);
+    $("#font-family").css("font-family", data["font-family"]);
+    $("#font-size").val(data["font-size"]);
+    $(".alignment.selected").removeClass("selected");
+    $(`.alignment[data-type=${data.alignment}]`).addClass("selected");
+    addRemoveSelectFromFontStyle(data, "bold");
+    addRemoveSelectFromFontStyle(data, "italic");
+    addRemoveSelectFromFontStyle(data, "underlined");
+    $("#fill-color-icon").css("border-bottom", `3px solid ${data.bgcolor}`);
+    $("#text-color-icon").css("border-bottom", `3px solid ${data.color}`);
 }
 
 function addRemoveSelectFromFontStyle(data, property) {
@@ -339,7 +344,6 @@ function emptySheet() {
     }
 }
 
-//TODO: to be modified acc to changes made to cellData storage approach
 function loadSheet() {
     let data = cellData[selectedSheet];
     let rowKeys = Object.keys(data);
@@ -390,7 +394,6 @@ function renameSheet() {
     }
 }
 
-//TODO: to be modified acc to changes made to cellData storage approach
 function deleteSheet() {
     if(totalSheets > 1) {
         $(".sheet-modal-parent").remove();
@@ -482,7 +485,10 @@ function addEventsToSheetTabs() {
 
     // select a different sheet
     $(".sheet-tab.selected").click(function()  {
-        if(!$(this).hasClass("selected")) selectSheet(this);
+        if(!$(this).hasClass("selected")) {
+            selectSheet(this);
+            $("#row-1-col-1").click();
+        }
     });
 }
 
@@ -501,6 +507,7 @@ $(".add-sheet").click(function() {
     $(".sheet-tab-container").append(`<div class="sheet-tab selected">Sheet ${sheetNumber}</div>`);
     $(".sheet-tab.selected")[0].scrollIntoView();
     addEventsToSheetTabs();
+    $("#row-1-col-1").click();
 });
 
 $(".left-scroller").click(function() {
@@ -522,6 +529,45 @@ $(".right-scroller").click(function() {
     }
     $(".sheet-tab.selected")[0].scrollIntoView();
 });
+
+$("#menu-file").click(function() {
+    let fileModal = $(`<div class="file-modal">
+        <div class="file-options-modal">
+            <div class="close">
+                <div class="material-icons file-option-icon close-icon">arrow_circle_down</div>
+                <div>Close</div>
+            </div>
+            <div class="new">
+                <div class="material-icons file-option-icon new-icon">insert_drive_file</div>
+                <div>New</div>
+            </div>
+            <div class="open">
+                <div class="material-icons file-option-icon open-icon">folder_open</div>
+                <div>Open</div>
+            </div>
+            <div class="save">
+                <div class="material-icons file-option-icon save-icon">save</div>
+                <div>Save</div>
+            </div>
+        </div>
+        <div class="file-recent-modal"></div>
+        <div class="file-transparent-modal"></div>
+    </div>`);
+    $(".container").append(fileModal);
+    fileModal.animate({
+        width: "100vw" 
+    }, 300);
+    $(".close,.file-transparent-modal").click(function() {
+        fileModal.animate({
+            width: "0vw" 
+        }, 300);
+        setTimeout(() => {
+            fileModal.remove();
+        }, 299);
+    });
+});
+
+
 
 
 
