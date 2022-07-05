@@ -343,7 +343,7 @@ body{
 }
 
 .sheet-modal-parent,
-.loader-parent {
+.file-modal-parent {
     height: 100vh;
     width: 100vw;
     display: flex;
@@ -355,7 +355,8 @@ body{
 }
 
 .sheet-rename-modal,
-.sheet-delete-modal {
+.sheet-delete-modal,
+.file-save-modal {
     background-color: #fff;
     position: absolute;
     padding: 15px;
@@ -364,11 +365,13 @@ body{
 }
 
 .sheet-rename-modal > *,
-.sheet-delete-modal > * {
+.sheet-delete-modal > *,
+.file-save-modal > * {
     margin: 20px
 }
 
-.sheet-modal-title {
+.sheet-modal-title,
+.file-modal-title {
     font-weight: 500;
     text-shadow: 0.09px 0.09px 0.9px #217346;
     font-size: 24px;
@@ -379,7 +382,8 @@ body{
     display: block;
 }
 
-.sheet-modal-detail-container {
+.sheet-modal-detail-container, 
+.file-modal-detail-container {
     display: flex;
     align-items: center;
 }
@@ -402,7 +406,8 @@ body{
     outline-color: #217346;
 }
 
-.sheet-modal-confirmation {
+.sheet-modal-confirmation,
+.file-modal-confirmation {
     display: flex;
     justify-content: end;
 }
@@ -422,13 +427,15 @@ body{
 }
 
 .ok-button,
-.delete-button {
+.delete-button,
+.save-button {
     background-color: #217346;
     color: #fff;
 }
 
 .ok-button:hover,
-.delete-button:hover {
+.delete-button:hover,
+.save-button:hover {
     background-color: #145230;
 }
 

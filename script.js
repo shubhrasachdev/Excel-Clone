@@ -30,6 +30,7 @@ $("#cells").scroll(function(){
 
 // Generating cells and initializing cell data
 let cellData = { "Sheet 1": {} };
+let saved = true;
 let sheetNumber = 1;
 let totalSheets = 1;
 let selectedSheet = "Sheet 1";
@@ -280,6 +281,7 @@ $(".color-pick").colorPick({
 });
 
 function updateCellData(property, value) {
+    let prevCellData = JSON.stringify(cellData);
     if(value !== defaultProperties[property]) { // something diff from default value of property has been selected
         $(".input-cell.selected").each(function(_index, data) {
             let [ row, col ] = findRowCol(data);
@@ -304,6 +306,7 @@ function updateCellData(property, value) {
             }
         });
     }
+    if(saved && prevCellData != JSON.stringify(cellData)) saved = false;
 }
 
 $("#fill-color-icon, #text-color-icon").click(function() {
@@ -385,7 +388,8 @@ function renameSheet() {
         cellData = newCellData;
         selectedSheet = newSheetName;
         $(".sheet-tab.selected").text(newSheetName);
-        $(".sheet-modal-parent").remove();                    
+        $(".sheet-modal-parent").remove();
+        saved = false;                    
     } else {
         $(".error").remove();
         $(".sheet-modal-input-container").append(`
@@ -405,6 +409,7 @@ function deleteSheet() {
         delete cellData[currentSelectedSheet];
         currentSelectedSheet.remove();
         totalSheets--;
+        saved = false;
     } else {
         $(".sheet-delete-modal").append(`
             <div class="error"> Sorry, only one sheet exists and cannot be deleted. </div>
@@ -459,7 +464,7 @@ function addEventsToSheetTabs() {
             let deleteModal = `<div class="sheet-modal-parent">
                                 <div class="sheet-delete-modal">
                                     <div class="sheet-modal-title">
-                                        <span> Delete Sheet </span>
+                                        <span> Delete ${selectedSheet} </span>
                                     </div>
                                     <div class="sheet-modal-detail-container">
                                         <div class="material-icons delete-icon">delete</div>
@@ -508,6 +513,7 @@ $(".add-sheet").click(function() {
     $(".sheet-tab.selected")[0].scrollIntoView();
     addEventsToSheetTabs();
     $("#row-1-col-1").click();
+    saved = false;
 });
 
 $(".left-scroller").click(function() {
@@ -557,7 +563,7 @@ $("#menu-file").click(function() {
     fileModal.animate({
         width: "100vw" 
     }, 300);
-    $(".close,.file-transparent-modal").click(function() {
+    $(".close,.new,.save,.open,.file-transparent-modal").click(function() {
         fileModal.animate({
             width: "0vw" 
         }, 300);
@@ -565,10 +571,123 @@ $("#menu-file").click(function() {
             fileModal.remove();
         }, 299);
     });
+
+    $(".new").click(function() {
+        if(saved) {
+            newFile();
+        } else {
+            let saveModal = `<div class="file-modal-parent">
+                                <div class="file-save-modal">
+                                    <div class="file-modal-title">
+                                        <span> Save ${$(".title-bar").text()} </span>
+                                    </div>
+                                    <div class="file-modal-detail-container">
+                                        You seem to have unsaved changes in the current file. <br/>Do you wish to save them before proceeding?
+                                    </div>
+                                    <div class="file-modal-confirmation">
+                                        <div class="button save-button">Save</div>
+                                        <div class="button cancel-button">Cancel</div>
+                                    </div>
+                                </div>
+                            </div>`;
+            $(".container").append(saveModal);
+            $(".save-button").click(function() {
+                $(".file-modal-parent").remove();
+                saveFile(true);
+            });
+            $(".cancel-button").click(function() {
+                $(".file-modal-parent").remove();
+                newFile();
+            });
+
+        }
+    })
+
+    $(".save").click(function() {
+        saveFile();
+    });
+
+    $('.open').click(function() {
+        openFile();
+    });
+
 });
 
+function newFile() {
+    emptySheet();
+    $(".sheet-tab").remove();
+    $(".sheet-tab-container").append(`<div class="sheet-tab selected">Sheet 1 </div>`);
+    cellData = {"Sheet 1": {}};
+    selectedSheet = "Sheet 1";
+    totalSheets = 1;
+    sheetNumber = 1;
+    addEventsToSheetTabs();
+    $("#row-1-col-1").click();
+}
 
+function saveFile(createNewFile) {
+    $(".container").append(` <div class="sheet-modal-parent">
+                                <div class="sheet-rename-modal">
+                                    <div class="sheet-modal-title">
+                                        <span> Save File </span>
+                                    </div>
+                                    <div class="sheet-modal-input-container">
+                                        <span class="sheet-modal-input-title"> File Name: </span>
+                                        <input class="sheet-modal-input" value="${$(".title-bar").text()}" type="text" />
+                                    </div>
+                                    <div class="sheet-modal-confirmation">
+                                        <div class="button ok-button">OK</div>
+                                        <div class="button cancel-button">Cancel</div>
+                                    </div>
+                                </div>
+                            </div>`);
+    $(".ok-button").click(function() {
+        let fileName = $(".sheet-modal-input").val();
+        if(fileName) {
+            let href = `data:application/json,${encodeURIComponent(JSON.stringify(cellData))}`;
+            let a = $(`<a href=${href} download=${fileName + ".json"}/>`);
+            $(".container").append(a);
+            a[0].click();
+            a.remove();
+            $(".sheet-modal-parent").remove();
+            saved = true;
+            if(createNewFile) newFile();
+        }
+    });
 
+    $(".cancel-button").click(function() {
+        $(".sheet-modal-parent").remove();
+        if(createNewFile) newFile();
+    });
+}
 
+function openFile() {
+    let inputFile = $(`<input accept="application/json" type="file"/>`);
+    $(".container").append(inputFile);
+    inputFile.click();
+    inputFile.change(function(e) {
+        let file = e.target.files[0];
+        $(".title-bar").text(file.name.split(".json")[0]); // to change file name to opened file
+        let reader = new FileReader();
+        reader.readAsText(file);
+        reader.onload = function() {
+            emptySheet();
+            $(".sheet-tab").remove();
+            cellData = JSON.parse(reader.result);
+            let sheets = Object.keys(cellData);
+            for(let sheet of sheets) 
+                $(".sheet-tab-container").append(`<div class="sheet-tab selected">${sheet}</div>`);
+            addEventsToSheetTabs();
+            $(".sheet-tab").removeClass("selected");
+            $($(".sheet-tab")[0]).addClass("selected");
+            selectedSheet = sheets[0];
+            totalSheets = sheets.length;
+            sheetNumber = totalSheets;
+            loadSheet();
+            inputFile.remove();
+        }
+    });
+   
+}
 
 
