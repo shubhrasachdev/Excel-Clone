@@ -697,7 +697,7 @@ function copyCells() {
     clipboard.startCell = findRowCol(selectedCells[0]);
     clipboard.startCell[0]--;
     clipboard.startCell[1]--;  
-    selectedCells.each((idx, data) => {
+    selectedCells.each((_idx, data) => {
         let [row, col] = findRowCol(data);
         if(cellData[selectedSheet][row - 1] && cellData[selectedSheet][row - 1][col - 1]) {
             if(!clipboard.cellData[row - 1]) clipboard.cellData[row - 1] = {};
