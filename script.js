@@ -690,4 +690,58 @@ function openFile() {
    
 }
 
+let clipboard = {startCell: [], cellData: {}};
+let isCut = false;
+function copyCells() {
+    let selectedCells = $(".input-cell.selected");
+    clipboard.startCell = findRowCol(selectedCells[0]);
+    clipboard.startCell[0]--;
+    clipboard.startCell[1]--;  
+    selectedCells.each((idx, data) => {
+        let [row, col] = findRowCol(data);
+        if(cellData[selectedSheet][row - 1] && cellData[selectedSheet][row - 1][col - 1]) {
+            if(!clipboard.cellData[row - 1]) clipboard.cellData[row - 1] = {};
+            clipboard.cellData[row - 1][col - 1] = {...cellData[selectedSheet][row - 1][col - 1]};
+        }
+    });
+    console.log(clipboard);
+}
 
+function pasteCells() {
+    let startCell = findRowCol($(".input-cell.selected")[0]);
+    startCell[0]--;
+    startCell[1]--;
+    let rows = Object.keys(clipboard.cellData);
+    emptySheet();
+    for(let row of rows) {
+        let cols = Object.keys(clipboard.cellData[row]);
+        for(let col of cols) {
+            let dx = parseInt(row) - parseInt(clipboard.startCell[0]);
+            let dy = parseInt(col) - parseInt(clipboard.startCell[1]);
+            let newRow = startCell[0] + dx, newCol = startCell[1] + dy;
+            if(!cellData[selectedSheet][newRow]) cellData[selectedSheet][newRow] = {};
+            cellData[selectedSheet][newRow][newCol] = {...clipboard.cellData[row][col]};
+            if(isCut) {
+                delete cellData[selectedSheet][row][col];
+                if(Object.keys(cellData[selectedSheet][row]).length == 0) 
+                    delete cellData[selectedSheet][row];
+            }
+        }
+    }
+    isCut = false;
+    loadSheet();
+}
+
+$("#cut").click(function() {
+    copyCells();
+    isCut = true;
+});
+
+
+$("#copy").click(function() {
+    copyCells();
+});
+
+$("#paste").click(function() {
+    pasteCells();
+});
