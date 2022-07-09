@@ -3,11 +3,9 @@ const PS = new PerfectScrollbar("#cells", {
     wheelPropagation: true
 });
 
-// Getting column and row names/headers
-let columns = $("columns");
-for(let i = 1; i <= 100; i++){
+function getColName(col) {
     let str = "";
-    let n = i;
+    let n = col;
     while(n > 0){
         let rem = n % 26;
         if(rem == 0){ // 0 -> Z, 1 -> A, 2 -> B and so on
@@ -18,7 +16,14 @@ for(let i = 1; i <= 100; i++){
             n = Math.floor((n / 26));
         }
     }
-    $("#columns").append(`<div class="column-name">${str}</div>`);
+    return str;
+}
+
+// Getting column and row names/headers
+let columns = $("columns");
+for(let i = 1; i <= 100; i++){
+    let col = getColName(i);
+    $("#columns").append(`<div class="column-name">${col}</div>`);
     $("#rows").append(`<div class="row-name">${i}</div>`);
 }
 
@@ -43,7 +48,9 @@ let defaultProperties = {
     "underlined": false,
     "alignment": "left",
     "color": "#444",
-    "bgcolor": "#fff"
+    "bgcolor": "#fff",
+    "upStream": [],
+    "downStream": []
 };
 
 // For selection by mouse movement
@@ -62,7 +69,6 @@ function addEventsToCells() {
     $(".input-cell").blur(function(){
         $(this).attr("contenteditable","false");
         updateCellData("text", $(this).text());
-        console.log(cellData);
     });
 
     // Select / Unselect cells on clicking a cell
@@ -287,9 +293,9 @@ function updateCellData(property, value) {
             let [ row, col ] = findRowCol(data);
             if(cellData[selectedSheet][row - 1] == undefined) {
                 cellData[selectedSheet][row - 1] = {};
-                cellData[selectedSheet][row - 1][col - 1] = {...defaultProperties};
+                cellData[selectedSheet][row - 1][col - 1] = {...defaultProperties, "upStream": [], "downStream": []};
             } else if(cellData[selectedSheet][row - 1][col - 1] == undefined) 
-                cellData[selectedSheet][row - 1][col - 1] = {...defaultProperties};
+                cellData[selectedSheet][row - 1][col - 1] = {...defaultProperties, "upStream": [], "downStream": []};
             
             cellData[selectedSheet][row - 1][col - 1][property] = value;
         });
@@ -298,11 +304,7 @@ function updateCellData(property, value) {
             let [ row, col ] = findRowCol(data);
             if(cellData[selectedSheet][row - 1] && cellData[selectedSheet][row - 1][col - 1]) {
                 cellData[selectedSheet][row - 1][col - 1][property] = value;
-                if(JSON.stringify(cellData[selectedSheet][row - 1][col - 1]) == JSON.stringify(defaultProperties)){
-                    delete cellData[selectedSheet][row - 1][col - 1];
-                    if(Object.keys(cellData[selectedSheet][row - 1]).length == 0) 
-                        delete cellData[selectedSheet][row - 1];
-                }
+                deleteIfDefault(row, col);
             }
         });
     }
@@ -689,7 +691,7 @@ function openFile() {
     });
    
 }
-
+// TODO: Enable cut, copy and paste across sheets.
 let clipboard = {startCell: [], cellData: {}};
 let isCut = false;
 function copyCells() {
@@ -697,6 +699,7 @@ function copyCells() {
     clipboard.startCell = findRowCol(selectedCells[0]);
     clipboard.startCell[0]--;
     clipboard.startCell[1]--;  
+    clipboard.cellData = {};
     selectedCells.each((_idx, data) => {
         let [row, col] = findRowCol(data);
         if(cellData[selectedSheet][row - 1] && cellData[selectedSheet][row - 1][col - 1]) {
@@ -740,8 +743,148 @@ $("#cut").click(function() {
 
 $("#copy").click(function() {
     copyCells();
+    isCut = false;
 });
 
 $("#paste").click(function() {
     pasteCells();
 });
+
+$("#function-input").blur(function() {
+    if($(".input-cell.selected").length > 0) {
+        let formula = $(this).text();
+        let formulaArr = formula.split(" ");
+        let elements = [];
+        for(let el of formulaArr) {
+            if(el.length > 1) {
+                el = el.replace("(", "");
+                el = el.replace(")", "");
+                elements.push(el);
+            }
+        }
+        $(".input-cell.selected").each(function(_idx, data) {
+            if(updateStreams(data, elements, false)) {
+                console.log("UPDATED STREAMS!!!");
+            }
+            else alert("Formula is invalid.");
+        
+        });
+    } else {
+        alert("Please select a cell to apply formula");
+    }
+});
+
+function isFormulaValid(row, col, elements) {
+   
+    let data = cellData[selectedSheet][row - 1][col - 1];
+    for(let i = 0; i < elements.length; i++) {
+        if(data.downStream.includes(elements[i]) || checkForSelf(row, col, elements[i])) {
+            deleteIfDefault(row, col);
+            return false;
+        }
+    }
+    return true;
+}
+
+function deleteIfDefault(row, col) {
+    if (JSON.stringify(cellData[selectedSheet][row - 1][col - 1]) == JSON.stringify(defaultProperties)) {
+        delete cellData[selectedSheet][row - 1][col - 1];
+        if (Object.keys(cellData[selectedSheet][row - 1]).length == 0) {
+            delete cellData[selectedSheet][row - 1];
+        }
+    }
+}
+
+function updateStreams(ele, elements, update, oldUpStream) {
+    let [row, col] = findRowCol(ele);
+    let thisCellLabel = convertRowColToCell(row, col);
+    if(elements.includes(thisCellLabel)) return false;
+    if(cellData[selectedSheet][row - 1] && cellData[selectedSheet][row - 1][col - 1]) {
+        let downStream = cellData[selectedSheet][row - 1][col - 1].downStream;
+        let upStream = cellData[selectedSheet][row - 1][col - 1].upStream;
+        for(let cell of downStream) {
+            if(elements.includes(cell)) return false;
+        }
+
+        for(let cell of downStream) {
+            let [cellRow, cellCol] = convertCellToRowCol(cell);
+            console.log(updateStreams($(`#row-${cellRow}-col-${cellCol}`)[0], elements, true, upStream));
+        }
+    }
+    
+    if(!cellData[selectedSheet][row - 1]) cellData[selectedSheet][row - 1] = {};
+    if(!cellData[selectedSheet][row - 1][col - 1]) 
+        cellData[selectedSheet][row - 1][col - 1] = {...defaultProperties, "upStream": [...elements], "downStream": []};
+    else {
+        let upStream = [...cellData[selectedSheet][row - 1][col - 1].upStream];
+        if(update) {
+            for(let cell of oldUpStream) {
+                let [cellRow, cellCol] = convertCellToRowCol(cell);
+                let idx = cellData[selectedSheet][cellRow - 1][cellCol - 1].downStream.indexOf(thisCellLabel);
+                cellData[selectedSheet][cellRow - 1][cellCol - 1].downStream.splice(idx, 1);
+                deleteIfDefault(cellRow, cellCol);
+
+                idx = cellData[selectedSheet][row - 1][col - 1].upStream.indexOf(cell);
+                cellData[selectedSheet][row - 1][col - 1].upStream.splice(idx, 1);
+            }
+            for(let cell of elements) {
+                cellData[selectedSheet][row - 1][col - 1].upStream.push(cell);
+            }
+        } else {
+            for(let cell of upStream) {
+                let [cellRow, cellCol] = convertCellToRowCol(cell);
+                let idx = cellData[selectedSheet][cellRow - 1][cellCol - 1].downStream.indexOf(thisCellLabel);
+                cellData[selectedSheet][cellRow - 1][cellCol - 1].downStream.splice(idx, 1);
+                deleteIfDefault(cellRow, cellCol);
+            }
+            cellData[selectedSheet][row - 1][col - 1].upStream = [...elements];
+        }
+    }
+    
+    
+    for(let i of elements) {
+        let [elRow, elCol] = convertCellToRowCol(i);
+        // console.log("Element: " + elements[i]);
+        // console.log("[" + elRow + ", " + elCol + "]")
+        if(!cellData[selectedSheet][elRow - 1]) cellData[selectedSheet][elRow - 1] = {};
+        if(!cellData[selectedSheet][elRow - 1][elCol - 1]) 
+            cellData[selectedSheet][elRow - 1][elCol - 1] = {...defaultProperties, "upStream": [], "downStream": [thisCellLabel]};
+        else if(!cellData[selectedSheet][elRow - 1][elCol - 1].downStream.includes(thisCellLabel))
+            cellData[selectedSheet][elRow - 1][elCol - 1].downStream.push(thisCellLabel)
+        
+    }
+    console.log(cellData);
+    return true;
+}
+
+function checkForSelf(row, col, cellLabel) {
+    let [cellRow, cellCol] = convertCellToRowCol(cellLabel);
+    return (cellRow == row && cellCol == col);
+}
+
+function convertCellToRowCol(cellLabel) {
+    let leftStr, rightStr;
+    for(let i = 0;i < cellLabel.length; i++) {
+      if(!isNaN(cellLabel.charAt(i))) {
+        leftStr = cellLabel.substring(0, i);
+        rightStr = cellLabel.substring(i);
+        break;
+      }  
+    }
+    let place = leftStr.length - 1;
+    let total = 0;
+    for(let i = 0; i < leftStr.length; i++) {
+        let charValue = leftStr.charCodeAt(i) - 64;
+        total += Math.pow(26, place) * charValue;
+        place--;
+    }
+    let row = parseInt(rightStr);
+    let col = total;
+    return [row, col];
+}
+
+function convertRowColToCell(row, col) {
+    let colLabel = getColName(col);
+    return colLabel + "" + row;
+}
+
