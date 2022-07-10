@@ -49,6 +49,7 @@ let defaultProperties = {
     "alignment": "left",
     "color": "#444",
     "bgcolor": "#fff",
+    "formula": "",
     "upStream": [],
     "downStream": []
 };
@@ -68,7 +69,18 @@ function addEventsToCells() {
 
     $(".input-cell").blur(function(){
         $(this).attr("contenteditable","false");
+        let [rowId, colId] = findRowCol(this);
+        if (cellData[selectedSheet][rowId - 1][colId - 1].formula != "") {
+            updateStreams(this, []);
+        }
+        
+        cellData[selectedSheet][rowId - 1][colId - 1].formula = "";
         updateCellData("text", $(this).text());
+        let cell = convertRowColToCell(rowId, colId);
+        evalFormula(cell);  
+             
+        console.log(cellData);
+        
     });
 
     // Select / Unselect cells on clicking a cell
@@ -181,6 +193,7 @@ function changeHeader([row, col]) {
     addRemoveSelectFromFontStyle(data, "underlined");
     $("#fill-color-icon").css("border-bottom", `3px solid ${data.bgcolor}`);
     $("#text-color-icon").css("border-bottom", `3px solid ${data.color}`);
+    $("#function-input").text(data.formula);
 }
 
 function addRemoveSelectFromFontStyle(data, property) {
@@ -756,15 +769,18 @@ $("#function-input").blur(function() {
         let formulaArr = formula.split(" ");
         let elements = [];
         for(let el of formulaArr) {
-            if(el.length > 1) {
+            if(el.length >= 2) {
                 el = el.replace("(", "");
                 el = el.replace(")", "");
-                elements.push(el);
+                if(!elements.includes(el)) elements.push(el);
             }
         }
         $(".input-cell.selected").each(function(_idx, data) {
             if(updateStreams(data, elements, false)) {
-                console.log("UPDATED STREAMS!!!");
+                let [row, col] = findRowCol(data);
+                cellData[selectedSheet][row - 1][col - 1].formula = formula;
+                let cellLabel = convertRowColToCell(row, col);
+                evalFormula(cellLabel);
             }
             else alert("Formula is invalid.");
         
@@ -774,16 +790,29 @@ $("#function-input").blur(function() {
     }
 });
 
-function isFormulaValid(row, col, elements) {
-   
-    let data = cellData[selectedSheet][row - 1][col - 1];
-    for(let i = 0; i < elements.length; i++) {
-        if(data.downStream.includes(elements[i]) || checkForSelf(row, col, elements[i])) {
-            deleteIfDefault(row, col);
-            return false;
+function evalFormula(cell) {
+    let [row, col] = convertCellToRowCol(cell);
+    let formula = cellData[selectedSheet][row - 1][col - 1].formula;
+    if(formula != "") {
+        let upStream = cellData[selectedSheet][row - 1][col - 1].upStream;
+        let upStreamValue = [];
+        for(let i in upStream) {
+            let [cellRow, cellCol] = convertCellToRowCol(upStream[i]);
+            let value;
+            if(cellData[selectedSheet][cellRow - 1][cellCol - 1].text == "") value = "0";
+            else {
+                value = cellData[selectedSheet][cellRow - 1][cellCol - 1].text;
+
+            }
+            upStreamValue.push(value);
+            formula = formula.replace(upStream[i], upStreamValue[i]);
         }
+        console.log(formula);
+        cellData[selectedSheet][row - 1][col - 1].text = eval(formula);
+        loadSheet();
     }
-    return true;
+    let downStream = cellData[selectedSheet][row - 1][col - 1].downStream;
+    for(let i = downStream.length - 1; i >= 0; i--) evalFormula(downStream[i]);
 }
 
 function deleteIfDefault(row, col) {
@@ -864,7 +893,7 @@ function checkForSelf(row, col, cellLabel) {
 
 function convertCellToRowCol(cellLabel) {
     let leftStr, rightStr;
-    for(let i = 0;i < cellLabel.length; i++) {
+    for(let i = 0; i < cellLabel.length; i++) {
       if(!isNaN(cellLabel.charAt(i))) {
         leftStr = cellLabel.substring(0, i);
         rightStr = cellLabel.substring(i);
